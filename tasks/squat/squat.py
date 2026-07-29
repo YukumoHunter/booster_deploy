@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import MISSING
+import json
 from pathlib import Path
 
 import numpy as np
@@ -95,6 +96,7 @@ class SquatPolicy(Policy):
             dtype=np.int64,
         )
         self._validate_robot_config()
+        self._apply_gain_overrides()
         self.robot.data.to("cpu")
         self.reset()
 
@@ -148,6 +150,43 @@ class SquatPolicy(Policy):
         )
         if self.action_scale.shape != (self.robot.num_joints,):
             raise ValueError("Squat ONNX action scale must contain 22 values")
+
+    def _apply_gain_overrides(self) -> None:
+        if self.cfg.gain_overrides_path is None:
+            return
+        path = Path(self.task_path, self.cfg.gain_overrides_path)
+        try:
+            overrides = json.loads(path.read_text())
+        except FileNotFoundError as exc:
+            raise FileNotFoundError(f"Gain overrides not found: {path}") from exc
+        if not isinstance(overrides, dict):
+            raise ValueError(f"Gain overrides must be a JSON object: {path}")
+
+        gain_tensors = {
+            "stiffness": self.robot.joint_stiffness,
+            "damping": self.robot.joint_damping,
+        }
+        unknown_sections = set(overrides) - set(gain_tensors)
+        if unknown_sections:
+            raise ValueError(
+                f"Unknown gain override sections: {sorted(unknown_sections)}"
+            )
+        for section, joint_values in overrides.items():
+            if not isinstance(joint_values, dict):
+                raise ValueError(f"Gain override '{section}' must be an object")
+            gain_tensor = gain_tensors[section]
+            for joint_name, value in joint_values.items():
+                try:
+                    joint_index = self.robot.cfg.joint_names.index(joint_name)
+                except ValueError as exc:
+                    raise ValueError(
+                        f"Unknown joint in {section} overrides: {joint_name}"
+                    ) from exc
+                if not isinstance(value, (int, float)) or value < 0:
+                    raise ValueError(
+                        f"Invalid {section} override for {joint_name}: {value}"
+                    )
+                gain_tensor[joint_index] = float(value)
 
     def reset(self) -> None:
         self.squat_state = np.asarray([[0, 0, 1]], dtype=np.int64)
@@ -293,6 +332,7 @@ class SquatPolicy(Policy):
 class SquatPolicyCfg(PolicyCfg):
     constructor = SquatPolicy
     checkpoint_path: str = MISSING
+    gain_overrides_path: str | None = "gain_overrides.json"
 
 
 @configclass

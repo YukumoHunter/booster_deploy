@@ -75,6 +75,29 @@ The policy observation intentionally omits trunk translation and base linear
 velocity, so the same 122-value observation is constructed from signals
 available in both MuJoCo and on the real robot.
 
+## Gain overrides
+
+The ONNX metadata supplies the default deployment stiffness and damping. Task
+specific overrides are loaded from `tasks/squat/gain_overrides.json` and are
+applied by joint name on top of those defaults. The included override sets both
+ankle pitch and roll damping values to `2.0` on each leg.
+
+Either section is optional:
+
+```json
+{
+  "stiffness": {
+    "Left_Ankle_Pitch": 40.0
+  },
+  "damping": {
+    "Left_Ankle_Pitch": 2.0
+  }
+}
+```
+
+Set `gain_overrides_path` to `null` in the task policy configuration to disable
+file-based overrides.
+
 ## Development
 
 ```bash
