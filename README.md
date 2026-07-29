@@ -1,114 +1,80 @@
-# Booster Deploy
+# Booster Squat Deploy
 
-Booster Deploy is a lightweight deployment framework that supports running control policies on Booster robots (sim2real), MuJoCo (sim2sim), and Webots (internal sim2sim). The system adopts many well-established designs from IsaacLab to provide modular abstractions, allowing unified policy execution across both simulated and real robotic platforms.
+This repository deploys the toggle-controlled Booster K1 squat policy in
+MuJoCo or on a real robot. The ONNX model owns the reversible squat state
+machine; deployment only persists its opaque state and supplies the operator's
+enabled/disabled command.
 
+## Install
 
-## Prerequisites
+[Pixi](https://pixi.sh) manages the Python environment on Linux x86-64 and
+ARM64:
 
-| Environment | Notes |
-|-------------|-------|
-| Booster firmware >= v1.4 | Required for real robot deployments. |
-| Python 3.10+ | Already installed on the robot |
-| ROS 2 Humble | Required for `/low_state` + `/joint_ctrl` topics. Already installed on the robot. |
-| MuJoCo / Webots | Optional; install if you plan to run the respective simulators. |
-
-
-## Running Deployments
-
-### Add and list tasks:
-   1. Create a subfolder under `tasks/` for your task.
-   2. Implement a `Policy`/`PolicyCfg` and provide a `ControllerCfg` referencing the policy.
-   3. Place policy checkpoints under `models/` and reference the path in the config.
-   4. Register your `ControllerCfg` config in the task registry (see existing tasks for the registration pattern).
-   5. Check all available tasks:
-      ```bash
-      python3 scripts/deploy.py --list
-      ```
-
-### Run Sim2Sim (MuJoCo)
-
-- Download and install BoosterAssets:
-   - Clone the [booster_assets](https://github.com/BoosterRobotics/booster_assets) which contains Booster robot models and resources.
-   - Install booster_assets python helper following the instructions in the repository.
-
-- Install Python dependencies on local machine:
-   ```
-   pip install -r requirements.txt
-   ```
-
-- Launch the task in mujoco:
-   ```bash
-   python scripts/deploy.py --task <TASK_NAME> --mujoco
-   ```
-
-### Run Sim2Real (Real Robots)
-
-**IMPORTANT**: Make sure to install [Booster Firmware](https://booster.feishu.cn/wiki/E3q5wF5SnitXZgkY18Uc8odBnXb) >= v1.4 on the robot before proceeding.
-
-**NOTE**: If you plan to deploy on the T1 Standard Edition robot, you need to choose to deploy on the **motion board** rather than the perception board.
-
-- After you finish testing your task with Sim2Sim locally, copy the project to the robot.
-
-- Install Booster Robotic SDK on robot:
-   - Clone the latest [Booster Robotics SDK](https://github.com/BoosterRobotics/booster_robotics_sdk) repository into the robot.
-   - Follow the build instructions in the SDK repository.
-   - **Important**: Make sure to build and install the Python bindings:
-     ```bash
-     cd booster_robotics_sdk
-     mkdir build && cd build
-     cmake .. -DBUILD_PYTHON_BINDING=ON
-     make -j$(nproc)
-     sudo make install
-     ```
-
-- Install Python dependencies on the robot:
-   ```
-   pip install -r requirements.txt
-   ```
-
-- SSH into the robot and start the ROS 2 environment by sourcing the provided setup script:
-   ```bash
-   source /opt/booster/BoosterRos2Interface/install/setup.bash
-   ```
-
-- Launch the task on the robot and follow the prompts shown in the command line..
-   ```bash
-   python3 scripts/deploy.py --task <TASK_NAME>
-   ```
-
-
-## Repository Layout
-
-```
-booster_deploy/
-├─ booster_deploy/           # Controllers, policies, utilities
-├─ scripts/                  # Entry-point scripts (deploy.py)
-├─ tasks/                    # Task registry and configs
-├─ requirements.txt          # Python dependencies
-└─ fastdds_profile.xml       # Default FastDDS settings for ROS 2
+```bash
+pixi install --locked
 ```
 
-Key modules:
-- `booster_deploy/`: Core module providing a unified abstraction for both simulators and physical robots, and handling communication via ROS 2 (implements a /low_state subscriber and a /low_cmd publisher to bridge policies to hardware).
-- `booster_deploy/robots/`: Robot configuration modules. This folder contains booster robot configs by defining a `RobotCfg` describing:
-    - joint names and body names
-    - default joint positions
-    - default joint stiffness (`joint_stiffness`) and damping (`joint_damping`)
-    - effort limits
-    - `mjcf_path` for MuJoCo model loading
-    - `prepare_state` (prepare pose, stiffness and damping used when entering custom mode)
+MuJoCo also needs the robot data checkout. The upstream Python wheel does not
+contain the XML and mesh assets, so point deployment at the checkout itself:
 
- - `tasks/`: User task definitions and implementations. Each task module contains:
-    - `Policy`/`PolicyCfg` class implementing the inference logic;
-    - a `ControllerCfg` class describing the task configuration including the policy;
-    - registering a task with a `ControllerCfg` instance.
+```bash
+git clone https://github.com/BoosterRobotics/booster_assets ../booster_assets
+export BOOSTER_ASSETS_DIR="$(realpath ../booster_assets)"
+```
 
-   Typical task layout (example):
+For real-robot control, Booster firmware 1.4 or newer and the firmware-provided
+ROS 2 `booster_interface` package are still required. Source its overlay before
+launching:
 
-   ```text
-   tasks/my_task/
-   ├─ __init__.py        # registers the task via utils.register.register_task
-   ├─ task.py            # Policy and ControllerCfg implementation
-   ├─ models/            # optional policy checkpoints
-   └─ motions/           # optional motion primitives or recordings
-   ```
+```bash
+source /opt/booster/BoosterRos2Interface/install/setup.bash
+```
+
+The high-level mode client is the Rust/Python
+[`booster-sdk`](https://github.com/IntelligentRoboticsLab/booster_sdk), installed
+by Pixi from PyPI. It communicates over DDS domain 0 by default; set
+`BOOSTER_DOMAIN_ID` if the robot uses another domain.
+
+## Run
+
+The sole task is `squat`, so it is selected when `--task` is omitted:
+
+```bash
+pixi run list-tasks
+pixi run deploy-mujoco
+pixi run deploy
+```
+
+`pixi run deploy --task squat` remains available for explicit selection.
+Use `--webots` with `deploy` when the ROS topics are provided by Webots.
+
+On the real robot, press joystick A (keyboard `x`) to enter custom mode, then
+joystick B (keyboard `r`) to start the policy. After startup, joystick B or
+keyboard `s` toggles squat on and off. In MuJoCo, joystick B or keyboard `s`
+toggles immediately.
+
+MuJoCo initializes the robot directly from the model's embedded frame-zero
+root pose, orientation, and joint positions.
+
+## Stateful ONNX contract
+
+The model inputs are `obs`, `squat_enabled`, and `squat_state_in`. Every call
+returns actions, `squat_state_out`, and the next reference arrays. Deployment
+feeds the returned state and references into the next control step without
+interpreting the state machine. Startup and policy reset restore disabled
+standing state `[0, 0, 1]` and the embedded frame-zero reference.
+
+The policy observation intentionally omits trunk translation and base linear
+velocity, so the same 122-value observation is constructed from signals
+available in both MuJoCo and on the real robot.
+
+## Development
+
+```bash
+pixi run test
+pixi run lint
+```
+
+The tracked policy artifact is `tasks/squat/models/squat.onnx`. Its metadata is
+validated at startup and is the source of truth for observation layout, joint
+order, default positions, gains, and action scaling.

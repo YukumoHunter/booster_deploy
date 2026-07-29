@@ -61,13 +61,6 @@ class RobotCfg:
 
 
 @configclass
-class VelocityCommandCfg:
-    vx_max: float = 1.0
-    vy_max: float = 1.0
-    vyaw_max: float = 1.0
-
-
-@configclass
 class PolicyCfg:
     constructor: Callable = MISSING
     checkpoint_path: str = MISSING
@@ -89,7 +82,6 @@ class ControllerCfg:
 
     policy_dt: float = 0.02
     robot: RobotCfg = MISSING
-    vel_command: Optional[VelocityCommandCfg] = None
     policy: PolicyCfg = MISSING
 
     mujoco: MujocoControllerCfg = MujocoControllerCfg()

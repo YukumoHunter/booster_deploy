@@ -1,19 +1,22 @@
 from __future__ import annotations
 
-import sys
+import os
+from pathlib import Path
 from time import sleep
-import select
 import numpy as np
 import torch
 import mujoco
 import mujoco.viewer
-from booster_assets import BOOSTER_ASSETS_DIR
-from .base_controller import BaseController, ControllerCfg, VelocityCommand
+from ..utils.remote_control_service import RemoteControlService
+from .base_controller import BaseController, ControllerCfg
 
 
 class MujocoController(BaseController):
     def __init__(self, cfg: ControllerCfg):
         super().__init__(cfg)
+        self.remote_control = RemoteControlService()
+        self.remote_control.arm_squat_toggle()
+        self.remote_control.print_controls(real_robot=False)
 
         mjcf_path = self._expand_assets_placeholder(self.robot.cfg.mjcf_path)
         self.mj_model = mujoco.MjModel.from_xml_path(mjcf_path)
@@ -22,13 +25,24 @@ class MujocoController(BaseController):
         self.mj_data = mujoco.MjData(self.mj_model)
         mujoco.mj_resetData(self.mj_model, self.mj_data)
 
-        self.mj_data.qpos = np.concatenate(
-            [
-                np.array(self.cfg.mujoco.init_pos, dtype=np.float32),
-                np.array(self.cfg.mujoco.init_quat, dtype=np.float32),
-                self.robot.default_joint_pos.numpy(),
-            ]
-        )
+        if hasattr(self.policy, "get_initial_qpos"):
+            initial_qpos = self.policy.get_initial_qpos()  # type: ignore[attr-defined]
+        else:
+            initial_qpos = np.concatenate(
+                [
+                    np.array(self.cfg.mujoco.init_pos, dtype=np.float32),
+                    np.array(self.cfg.mujoco.init_quat, dtype=np.float32),
+                    self.robot.default_joint_pos.numpy(),
+                ]
+            )
+        initial_qpos = np.asarray(initial_qpos, dtype=np.float32).reshape(-1)
+        if initial_qpos.shape != (int(self.mj_model.nq),):
+            raise ValueError(
+                f"Initial qpos has shape {initial_qpos.shape}; "
+                f"expected ({int(self.mj_model.nq)},)"
+            )
+        self.mj_data.qpos[:] = initial_qpos
+        self.mj_data.qvel[:] = 0.0
         mujoco.mj_forward(self.mj_model, self.mj_data)
 
         # render a second "ghost" robot (kinematic only) without
@@ -108,32 +122,16 @@ class MujocoController(BaseController):
     def _expand_assets_placeholder(self, path: str) -> str:
         """Replace {BOOSTER_ASSETS_DIR} placeholder in a path string.
         """
-        try:
-            return path.replace("{BOOSTER_ASSETS_DIR}", str(BOOSTER_ASSETS_DIR))
-        except Exception:
-            return path
-
-    def update_vel_command(self):
-        cmd: VelocityCommand = self.vel_command
-        if select.select([sys.stdin], [], [], 0)[0]:
-            try:
-                parts = sys.stdin.readline().strip().split()
-                if len(parts) == 3:
-                    (cmd.lin_vel_x, cmd.lin_vel_y, cmd.ang_vel_yaw) = map(float, parts)
-                    print(
-                        f"Updated command to: x={cmd.lin_vel_x},"
-                        f"y={cmd.lin_vel_y}, yaw={cmd.ang_vel_yaw}\n"
-                        "Set command (x, y, yaw): ",
-                        end="",
-                    )
-                else:
-                    raise ValueError
-            except ValueError:
-                print(
-                    "Invalid input. Enter three numeric values. "
-                    "Set command (x, y, yaw): ",
-                    end="",
-                )
+        assets_dir = os.environ.get("BOOSTER_ASSETS_DIR")
+        if not assets_dir:
+            raise RuntimeError(
+                "BOOSTER_ASSETS_DIR must point to a booster_assets checkout "
+                "when using --mujoco"
+            )
+        expanded = path.replace("{BOOSTER_ASSETS_DIR}", assets_dir)
+        if not Path(expanded).is_file():
+            raise FileNotFoundError(f"MuJoCo model not found: {expanded}")
+        return expanded
 
     def update_state(self) -> None:
         dof_pos = self.mj_data.qpos.astype(np.float32)[7:]
@@ -198,9 +196,6 @@ class MujocoController(BaseController):
     def ctrl_step(self, dof_targets: torch.Tensor):
         dof_targets = dof_targets.cpu().numpy()  # type: ignore
         self.log_states(dof_targets)
-        if self.vel_command is not None:
-            self.update_vel_command()
-
         dof_pos = self.mj_data.qpos.astype(np.float32)[7:]
         dof_vel = self.mj_data.qvel.astype(np.float32)[6:]
         kp = self.robot.joint_stiffness.numpy()
@@ -223,18 +218,23 @@ class MujocoController(BaseController):
             dof_vel = self.mj_data.qvel.astype(np.float32)[6:]
 
     def run(self):
+        try:
+            self._run_viewer()
+        finally:
+            self.remote_control.close()
+
+    def _run_viewer(self):
         with mujoco.viewer.launch_passive(
                 self.mj_model, self.mj_data) as viewer:
 
             self.viewer = viewer
             viewer.cam.elevation = -20
-            if self.vel_command is not None:
-                print("\nSet command (x, y, yaw): ", end="")
             self.update_state()
             self.start()
             while viewer.is_running() and self.is_running:
                 sleep(self.cfg.mujoco.physics_dt * self.cfg.mujoco.decimation)
                 self.update_state()
+                self.squat_enabled = self.remote_control.get_squat_enabled()
                 dof_targets = self.policy_step()
                 self.ctrl_step(dof_targets)
 

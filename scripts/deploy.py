@@ -4,21 +4,17 @@ import sys
 sys.path.append(".")
 
 parser = argparse.ArgumentParser()
-# require either --task or --list (mutually exclusive)
-group = parser.add_mutually_exclusive_group(required=True)
-group.add_argument("--task", type=str, help="Name of the configuration file.")
+group = parser.add_mutually_exclusive_group()
+group.add_argument(
+    "--task", type=str, default="squat", help="Task name (default: squat)."
+)
 group.add_argument("-l", "--list", action="store_true", dest="list_tasks",
                    default=False, help="list available tasks")
 
-parser.add_argument("--net", type=str, default="127.0.0.1",
-                    help="Network interface for SDK communication.")
 parser.add_argument("--mujoco", action="store_true", default=False,
                     help="deploy in mujoco simulation")
 parser.add_argument("--webots", action="store_true", default=False,
                     help="deploy in webots simulation")
-parser.add_argument(
-    "--device", type=str, default="cpu",
-    help="Device to run the evaluation on (e.g., 'cpu', 'cuda')")
 args = parser.parse_args()
 
 
@@ -50,9 +46,6 @@ def main():
         print(f"Unknown task '{args.task}'. Available tasks: {list(list_tasks().keys())}")
         sys.exit(1)
 
-    # Set device for policy
-    task_cfg.policy.device = args.device
-
     # decide how to run based on flags
     if args.mujoco:
         # run mujoco controller
@@ -62,12 +55,11 @@ def main():
     else:
         # initialize network and run robot portal
         try:
-            from booster_robotics_sdk_python import ChannelFactory  # type: ignore
-            ChannelFactory.Instance().Init(0, args.net)
-        except ImportError as e:
+            import booster_sdk  # noqa: F401
+        except ImportError:
             print(
-                "Error: booster_robotics_sdk_python is not installed.\n"
-                "Please install it to use real robot deployment.\n"
+                "Error: booster-sdk is not installed.\n"
+                "Run this command through Pixi for real robot deployment.\n"
                 "For MuJoCo simulation, use --mujoco flag instead."
             )
             sys.exit(1)

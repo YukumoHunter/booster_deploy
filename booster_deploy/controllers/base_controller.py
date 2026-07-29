@@ -5,7 +5,7 @@ import os
 import torch
 
 from .controller_cfg import (
-    ControllerCfg, PolicyCfg, RobotCfg, VelocityCommandCfg
+    ControllerCfg, PolicyCfg, RobotCfg
 )
 
 
@@ -74,25 +74,6 @@ class BoosterRobot:
     @property
     def num_bodies(self) -> int:
         return len(self.cfg.body_names)
-
-
-class Commands:
-    pass
-
-
-class VelocityCommand(Commands):
-    lin_vel_x: float
-    lin_vel_y: float
-    ang_vel_yaw: float
-
-    def __init__(self, cfg: VelocityCommandCfg) -> None:
-        self.vx_max = cfg.vx_max
-        self.vy_max = cfg.vy_max
-        self.vyaw_max = cfg.vyaw_max
-
-        self.lin_vel_x: float = 0.0
-        self.lin_vel_y: float = 0.0
-        self.ang_vel_yaw: float = 0.0
 
 
 class Policy:
@@ -169,7 +150,6 @@ class BaseController:
 
     cfg: ControllerCfg
     robot: BoosterRobot
-    vel_command: VelocityCommand
     policy: Policy
 
     def __init__(self, cfg: ControllerCfg) -> None:
@@ -177,10 +157,8 @@ class BaseController:
         self._step_count: int = 0
         self._elapsed_s: float = 0.0
         self.is_running: bool = False
+        self.squat_enabled: bool = False
         self.robot = BoosterRobot(cfg.robot)
-        self.vel_command = None  # type: ignore
-        if self.cfg.vel_command is not None:
-            self.vel_command = VelocityCommand(cfg.vel_command)
         self.policy = self.cfg.policy.constructor(self.cfg.policy, self)
 
     def start(self):

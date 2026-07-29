@@ -1,8 +1,0 @@
-# Initial dependency list
-torch
-mujoco
-scipy
-evdev
-
-# Robot SDK
-# booster_robotics_sdk_python

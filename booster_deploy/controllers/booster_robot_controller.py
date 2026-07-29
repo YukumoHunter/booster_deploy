@@ -14,10 +14,7 @@ from rclpy.executors import SingleThreadedExecutor, ExternalShutdownException
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from booster_interface.msg import LowState, LowCmd, MotorCmd
 
-from booster_robotics_sdk_python import (  # type: ignore
-    B1LocoClient,
-    RobotMode,
-)
+from booster_sdk.client.booster import BoosterClient, RobotMode
 
 from .controller_cfg import ControllerCfg
 from .base_controller import BaseController, BoosterRobot
@@ -67,6 +64,7 @@ class BoosterRobotPortal:
         self.logger = logging.getLogger(__name__)
 
         self.remoteControlService = RemoteControlService()
+        self.remoteControlService.print_controls(real_robot=True)
         # Use multiprocessing.Event for inter-process communication
         self.exit_event = mp.Event()
         self.is_running = True
@@ -130,9 +128,7 @@ class BoosterRobotPortal:
 
         command_dtype = np.dtype(
             [
-                ("vx", float),
-                ("vy", float),
-                ("vyaw", float),
+                ("squat_enabled", np.bool_),
             ]
         )
         self.synced_command = SyncedArray(
@@ -155,10 +151,9 @@ class BoosterRobotPortal:
 
     def _init_communication(self) -> None:
         try:
-            self.client = B1LocoClient()
+            self.client = BoosterClient()
             self.create_low_cmd_publisher("booster_deploy_low_cmd_pub")
             self._start_low_state_subscription()
-            self.client.Init()
         except Exception as e:
             self.logger.error(f"Failed to initialize communication: {e}")
             raise
@@ -252,16 +247,16 @@ class BoosterRobotPortal:
             self._state_buf[0]["feedback_torque"][:] = fb_torque
             self.synced_state.write(self._state_buf)
 
-            # update velocity commands to synced_command
+            # Publish the latched operator command to the inference process.
             cmd = np.zeros((1,), dtype=self.synced_command.dtype)
-            cmd[0]["vx"] = self.remoteControlService.get_vx_cmd()
-            cmd[0]["vy"] = self.remoteControlService.get_vy_cmd()
-            cmd[0]["vyaw"] = self.remoteControlService.get_vyaw_cmd()
+            cmd[0]["squat_enabled"] = (
+                self.remoteControlService.get_squat_enabled()
+            )
             self.synced_command.write(cmd)
 
         except Exception as e:
             self.logger.error(f"Error in _low_state_handler: {e}")
-            self.running = False
+            self.is_running = False
             self.exit_event.set()
 
     def create_low_cmd_publisher(self, name):
@@ -322,16 +317,7 @@ class BoosterRobotPortal:
         time.sleep(0.1)
 
         # change to custom mode
-        self.client.ChangeMode(RobotMode.kCustom)
-        # for i in range(20):  # try multiple times to make sure mode is changed
-        #     self.client.ChangeMode(RobotMode.kCustom)
-        #     time.sleep(0.5)
-        #     if (mode:= self.client.GetStatus().current_mode) == RobotMode.kCustom:
-        #         break
-        # else:
-        #     self.logger.error("Failed to switch to custom mode")
-        #     return False
-
+        self.client.change_mode(RobotMode.CUSTOM)
         trans = np.linspace(init_joint_pos, prepare_state.joint_pos, num=500)
         start_time = self.timer.get_time()
         for i in range(500):
@@ -366,6 +352,7 @@ class BoosterRobotPortal:
         self.inference_process.start()
         self.logger.info("Inference process started")
 
+        self.remoteControlService.arm_squat_toggle()
         print(f"{self.remoteControlService.get_operation_hint()}")
         return True
 
@@ -458,7 +445,7 @@ class BoosterRobotPortal:
 
         # exit and switch to walking mode
         self.logger.info("Exiting controller, switching to walking mode...")
-        self.client.ChangeMode(RobotMode.kWalking)
+        self.client.change_mode(RobotMode.WALKING)
 
     def __enter__(self) -> BoosterRobotPortal:
         return self
@@ -483,12 +470,9 @@ class BoosterRobotController(BaseController):
         super().__init__(cfg)
         self.portal = portal
 
-    def update_vel_command(self):
+    def update_squat_command(self):
         cmd = self.portal.synced_command.read()[0]
-
-        self.vel_command.lin_vel_x = cmd["vx"] * self.vel_command.vx_max
-        self.vel_command.lin_vel_y = cmd["vy"] * self.vel_command.vy_max
-        self.vel_command.ang_vel_yaw = cmd["vyaw"] * self.vel_command.vyaw_max
+        self.squat_enabled = bool(cmd["squat_enabled"])
 
     def update_state(self) -> None:
         state = self.portal.synced_state.read()[0]
@@ -535,8 +519,7 @@ class BoosterRobotController(BaseController):
 
     def run(self):
         self.update_state()
-        if self.vel_command is not None:
-            self.update_vel_command()
+        self.update_squat_command()
         self.start()
         next_inference_time = self.portal.timer.get_time()
         while self.is_running and not self.portal.exit_event.is_set():
@@ -546,8 +529,7 @@ class BoosterRobotController(BaseController):
             next_inference_time += self.cfg.policy_dt
 
             self.update_state()
-            if self.vel_command is not None:
-                self.update_vel_command()
+            self.update_squat_command()
             self.portal.metrics["policy_step"].mark()
             dof_targets = self.policy_step()
             self.ctrl_step(dof_targets)
