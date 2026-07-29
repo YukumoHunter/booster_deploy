@@ -36,10 +36,9 @@ Ubuntu 22.04 ROS 2 Humble installation. `rclpy` is loaded from
 `/opt/ros/humble`, while `booster_interface` is loaded from the Booster overlay;
 they are intentionally not installed by Pixi.
 
-The high-level mode client is Booster Robotics' original
-[`booster-robotics-sdk-python`](https://pypi.org/project/booster-robotics-sdk-python/),
-installed by Pixi from PyPI. The IntelligentRoboticsLab `booster-sdk` package is
-not used.
+The high-level mode client is IntelligentRoboticsLab's
+[`booster-sdk`](https://github.com/IntelligentRoboticsLab/booster_sdk), pinned
+to version `0.1.2-alpha.2` and installed by Pixi from PyPI.
 
 ## Run
 

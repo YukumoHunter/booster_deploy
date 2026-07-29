@@ -23,7 +23,7 @@ onnxruntime = ">=1.20,<2"
 ruff = ">=0.12,<1"
 
 [pypi-dependencies]
-booster-robotics-sdk-python = ">=1.5.6,<2"
+booster-sdk = "==0.1.2-alpha.2"
 evdev = ">=1.7,<2"
 
 [tasks]

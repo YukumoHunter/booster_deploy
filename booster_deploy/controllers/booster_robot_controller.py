@@ -14,10 +14,7 @@ from rclpy.executors import SingleThreadedExecutor, ExternalShutdownException
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from booster_interface.msg import LowState, LowCmd, MotorCmd
 
-from booster_robotics_sdk_python import (  # type: ignore
-    B1LocoClient,
-    RobotMode,
-)
+from booster_sdk.client.booster import BoosterClient, RobotMode
 
 from .controller_cfg import ControllerCfg
 from .base_controller import BaseController, BoosterRobot
@@ -154,10 +151,9 @@ class BoosterRobotPortal:
 
     def _init_communication(self) -> None:
         try:
-            self.client = B1LocoClient()
+            self.client = BoosterClient()
             self.create_low_cmd_publisher("booster_deploy_low_cmd_pub")
             self._start_low_state_subscription()
-            self.client.Init()
         except Exception as e:
             self.logger.error(f"Failed to initialize communication: {e}")
             raise
@@ -321,7 +317,7 @@ class BoosterRobotPortal:
         time.sleep(0.1)
 
         # change to custom mode
-        self.client.ChangeMode(RobotMode.kCustom)
+        self.client.change_mode(RobotMode.CUSTOM)
         trans = np.linspace(init_joint_pos, prepare_state.joint_pos, num=500)
         start_time = self.timer.get_time()
         for i in range(500):
@@ -449,7 +445,7 @@ class BoosterRobotPortal:
 
         # exit and switch to walking mode
         self.logger.info("Exiting controller, switching to walking mode...")
-        self.client.ChangeMode(RobotMode.kWalking)
+        self.client.change_mode(RobotMode.WALKING)
 
     def __enter__(self) -> BoosterRobotPortal:
         return self
