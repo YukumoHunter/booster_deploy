@@ -45,6 +45,7 @@ JOINT_ALIASES = {
     "Left_Shoulder_Pitch": "ALeft_Shoulder_Pitch",
     "Right_Shoulder_Pitch": "ARight_Shoulder_Pitch",
 }
+HEAD_ACTION_SCALE_MULTIPLIER = 0.1
 
 
 def _csv(metadata: dict[str, str], key: str) -> list[str]:
@@ -82,6 +83,10 @@ class SquatPolicy(Policy):
         )
         self.default_joint_pos = _float_csv(self.metadata, "default_joint_pos")
         self.action_scale = _float_csv(self.metadata, "action_scale")
+        for joint_name in ("Head_Yaw", "Head_Pitch"):
+            self.action_scale[self.policy_joint_names.index(joint_name)] *= (
+                HEAD_ACTION_SCALE_MULTIPLIER
+            )
         self.policy_to_robot = np.asarray(
             [
                 self.robot.cfg.joint_names.index(JOINT_ALIASES.get(name, name))

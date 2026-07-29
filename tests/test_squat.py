@@ -11,6 +11,7 @@ from booster_deploy.controllers.base_controller import BoosterRobot
 from booster_deploy.robots.booster import K1_CFG
 from booster_deploy.utils.remote_control_service import RemoteControlService
 from tasks.squat.squat import OUTPUT_NAMES, SquatPolicy, SquatPolicyCfg
+from tasks.squat.squat import HEAD_ACTION_SCALE_MULTIPLIER
 
 
 MODEL = Path(__file__).parents[1] / "tasks/squat/models/squat.onnx"
@@ -78,6 +79,29 @@ class SquatPolicyTest(unittest.TestCase):
         )
         np.testing.assert_allclose(
             qpos[7:][self.policy.policy_to_robot], self.policy.ref_joint_pos
+        )
+
+    def test_head_action_scale_is_reduced(self):
+        exported_scale = np.asarray(
+            [
+                float(value)
+                for value in self.policy.metadata["action_scale"].split(",")
+            ],
+            dtype=np.float32,
+        )
+        head_indices = [
+            self.policy.policy_joint_names.index(name)
+            for name in ("Head_Yaw", "Head_Pitch")
+        ]
+        np.testing.assert_allclose(
+            self.policy.action_scale[head_indices],
+            exported_scale[head_indices] * HEAD_ACTION_SCALE_MULTIPLIER,
+        )
+        body_indices = np.setdiff1d(
+            np.arange(len(exported_scale)), head_indices
+        )
+        np.testing.assert_allclose(
+            self.policy.action_scale[body_indices], exported_scale[body_indices]
         )
 
     def test_toggle_advances_and_state_is_persisted(self):
