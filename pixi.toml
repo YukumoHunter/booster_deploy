@@ -23,7 +23,7 @@ booster-sdk = ">=0.1.0,<0.2"
 evdev = ">=1.7,<2"
 
 [tasks]
-deploy = "python scripts/deploy.py"
+deploy = "bash -c 'source /opt/ros/humble/setup.bash && python scripts/deploy.py'"
 deploy-mujoco = "python scripts/deploy.py --mujoco"
 list-tasks = "python scripts/deploy.py --list"
 test = "python -m unittest discover -s tests -v"
