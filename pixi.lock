@@ -127,7 +127,7 @@ environments:
       - conda: https://prefix.dev/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://prefix.dev/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - conda: https://prefix.dev/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
-      - pypi: https://files.pythonhosted.org/packages/67/36/417cdae70f6c9437c8e85ea4dcf01fced672fa6e2dc4ef168f6bb9e80ea1/booster_robotics_sdk_python-1.5.6-cp310-cp310-manylinux_2_34_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/5a/6e/5aebbbfbce795aa1d95f6e6d760a4f81ce6af9fbfe3ddc0b8f1d8ef9d813/booster_sdk-0.1.2a2-cp310-cp310-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/a5/f5/397b61091120a9ca5001041dd7bf76c385b3bfd67a0e5bcb74b852bd22a4/evdev-1.9.3.tar.gz
       p2:
       - conda: https://prefix.dev/conda-forge/linux-aarch64/_openmp_mutex-4.5-7_kmp_llvm.conda
@@ -233,8 +233,8 @@ environments:
       - conda: https://prefix.dev/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://prefix.dev/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - conda: https://prefix.dev/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
+      - pypi: https://files.pythonhosted.org/packages/84/0f/14ec8eae11dd7f6e7341415016f06af989152af304182d1140f1804f3285/booster_sdk-0.1.2a2-cp310-cp310-manylinux_2_28_aarch64.whl
       - pypi: https://files.pythonhosted.org/packages/a5/f5/397b61091120a9ca5001041dd7bf76c385b3bfd67a0e5bcb74b852bd22a4/evdev-1.9.3.tar.gz
-      - pypi: https://files.pythonhosted.org/packages/ca/bf/12d1323c6c3e164ba29891266bbbb55b3e196839949e4aab328f6d4989b1/booster_robotics_sdk_python-1.5.6-cp310-cp310-manylinux_2_34_aarch64.whl
 packages:
 - conda: https://prefix.dev/conda-forge/linux-64/_openmp_mutex-4.5-7_kmp_llvm.conda
   build_number: 7
@@ -3091,18 +3091,18 @@ packages:
   run_exports: {}
   size: 24190
   timestamp: 1779159948016
-- pypi: https://files.pythonhosted.org/packages/67/36/417cdae70f6c9437c8e85ea4dcf01fced672fa6e2dc4ef168f6bb9e80ea1/booster_robotics_sdk_python-1.5.6-cp310-cp310-manylinux_2_34_x86_64.whl
-  name: booster-robotics-sdk-python
-  version: 1.5.6
-  sha256: 40f3b2b01f1d63ff881fa395bb3b8cec60df9f8be0976844cffa6af075866aeb
+- pypi: https://files.pythonhosted.org/packages/5a/6e/5aebbbfbce795aa1d95f6e6d760a4f81ce6af9fbfe3ddc0b8f1d8ef9d813/booster_sdk-0.1.2a2-cp310-cp310-manylinux_2_28_x86_64.whl
+  name: booster-sdk
+  version: 0.1.2a2
+  sha256: 0748e51c93527e4bdfea421c34f6f67afdd0694dc85977e0998b35604e53a15d
+  requires_python: '>=3.10'
+- pypi: https://files.pythonhosted.org/packages/84/0f/14ec8eae11dd7f6e7341415016f06af989152af304182d1140f1804f3285/booster_sdk-0.1.2a2-cp310-cp310-manylinux_2_28_aarch64.whl
+  name: booster-sdk
+  version: 0.1.2a2
+  sha256: 965e89475bf508941190c4150d3e3ef93366964b07c6d2838187b98eae9ff006
   requires_python: '>=3.10'
 - pypi: https://files.pythonhosted.org/packages/a5/f5/397b61091120a9ca5001041dd7bf76c385b3bfd67a0e5bcb74b852bd22a4/evdev-1.9.3.tar.gz
   name: evdev
   version: 1.9.3
   sha256: 2c140e01ac8437758fa23fe5c871397412461f42d421aa20241dc8fe8cfccbc9
   requires_python: '>=3.9'
-- pypi: https://files.pythonhosted.org/packages/ca/bf/12d1323c6c3e164ba29891266bbbb55b3e196839949e4aab328f6d4989b1/booster_robotics_sdk_python-1.5.6-cp310-cp310-manylinux_2_34_aarch64.whl
-  name: booster-robotics-sdk-python
-  version: 1.5.6
-  sha256: c7672f99866aab76dcc084f171c9d7f3e37a587377f4fce73490028272239da8
-  requires_python: '>=3.10'
