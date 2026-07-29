@@ -16,5 +16,8 @@ if [[ -z "${CONDA_PREFIX:-}" ]]; then
     exit 1
 fi
 export LD_LIBRARY_PATH="$CONDA_PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+# Do not allow stale packages from ~/.local to shadow the locked Pixi
+# environment. ROS overlay modules remain available through PYTHONPATH.
+export PYTHONNOUSERSITE=1
 
 exec python scripts/deploy.py "$@"

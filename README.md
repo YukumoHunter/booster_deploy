@@ -35,7 +35,9 @@ After sourcing ROS, the task restores the Pixi environment's `lib` directory
 to the front of `LD_LIBRARY_PATH`. This ensures ONNX Runtime uses Pixi's newer
 `libstdc++`, which provides the required `CXXABI_1.3.15`, instead of the older
 system copy on the robot. This setup is kept in `scripts/deploy_robot.sh` so the
-Pixi task remains a simple launcher.
+Pixi task remains a simple launcher. The wrapper also disables Python's user
+site so packages under `~/.local` cannot shadow the locked Pixi environment;
+ROS overlay packages remain available through `PYTHONPATH`.
 
 The Pixi environment uses Python 3.10 to remain ABI-compatible with the
 Ubuntu 22.04 ROS 2 Humble installation. `rclpy` is loaded from
