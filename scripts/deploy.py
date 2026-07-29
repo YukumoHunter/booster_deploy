@@ -71,9 +71,10 @@ def main():
                 "Error: the ROS 2 'booster_interface' package is not available.\n"
                 "Real-robot deployment needs the firmware-provided low-level "
                 "ROS interface in addition to the Booster Robotics SDK.\n"
-                "The Pixi deploy task sources /opt/ros/humble/setup.bash; "
-                "run it on the robot and verify that file provides the "
-                "booster_interface package.\n"
+                "The Pixi deploy task sources both /opt/ros/humble/setup.bash "
+                "and /opt/booster/BoosterRos2Interface/install/setup.bash; "
+                "run it on the robot and verify that the overlay provides "
+                "the booster_interface package.\n"
                 "For simulation, run: pixi run deploy-mujoco"
             )
             sys.exit(1)
