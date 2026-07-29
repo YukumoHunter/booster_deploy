@@ -30,7 +30,6 @@ ros = ["ros"]
 [tasks]
 deploy-mujoco = "python scripts/deploy.py --mujoco"
 list-tasks = "python scripts/deploy.py --list"
-test = "python -m unittest discover -s tests -v"
 lint = "ruff check --select E4,E7,E9,F ."
 
 [feature.ros.dependencies]

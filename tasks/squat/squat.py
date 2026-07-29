@@ -130,15 +130,22 @@ class SquatPolicy(Policy):
         ]
         if resolved_names != self.robot.cfg.joint_names:
             raise ValueError("Squat ONNX joint order does not match the K1 config")
-        expected = {
-            "default_joint_pos": self.robot.cfg.default_joint_pos,
-            "joint_stiffness": self.robot.cfg.joint_stiffness,
-            "joint_damping": self.robot.cfg.joint_damping,
-        }
-        for key, configured in expected.items():
-            exported = _float_csv(self.metadata, key)
-            if not np.allclose(exported, configured, rtol=0.0, atol=1e-6):
-                raise ValueError(f"K1 {key} does not match squat ONNX metadata")
+        if not np.allclose(
+            self.default_joint_pos,
+            self.robot.cfg.default_joint_pos,
+            rtol=0.0,
+            atol=1e-6,
+        ):
+            raise ValueError("K1 default_joint_pos does not match squat ONNX metadata")
+
+        # The policy artifact owns its deployment gains. Applying them here
+        # prevents stale robot config values from changing policy behavior.
+        self.robot.joint_stiffness = torch.from_numpy(
+            _float_csv(self.metadata, "joint_stiffness")
+        )
+        self.robot.joint_damping = torch.from_numpy(
+            _float_csv(self.metadata, "joint_damping")
+        )
         if self.action_scale.shape != (self.robot.num_joints,):
             raise ValueError("Squat ONNX action scale must contain 22 values")
 

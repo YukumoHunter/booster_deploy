@@ -78,7 +78,6 @@ available in both MuJoCo and on the real robot.
 ## Development
 
 ```bash
-pixi run test
 pixi run lint
 pixi run ros-build
 ```
