@@ -27,7 +27,7 @@ booster-sdk = "==0.1.2-alpha.2"
 evdev = ">=1.7,<2"
 
 [tasks]
-deploy = "bash -c 'source /opt/ros/humble/setup.bash && source /opt/booster/BoosterRos2Interface/install/setup.bash && python scripts/deploy.py'"
+deploy = "bash scripts/deploy_robot.sh"
 deploy-mujoco = "python scripts/deploy.py --mujoco"
 list-tasks = "python scripts/deploy.py --list"
 test = "python -m unittest discover -s tests -v"

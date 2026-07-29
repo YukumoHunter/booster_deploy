@@ -31,6 +31,12 @@ source /opt/ros/humble/setup.bash
 source /opt/booster/BoosterRos2Interface/install/setup.bash
 ```
 
+After sourcing ROS, the task restores the Pixi environment's `lib` directory
+to the front of `LD_LIBRARY_PATH`. This ensures ONNX Runtime uses Pixi's newer
+`libstdc++`, which provides the required `CXXABI_1.3.15`, instead of the older
+system copy on the robot. This setup is kept in `scripts/deploy_robot.sh` so the
+Pixi task remains a simple launcher.
+
 The Pixi environment uses Python 3.10 to remain ABI-compatible with the
 Ubuntu 22.04 ROS 2 Humble installation. `rclpy` is loaded from
 `/opt/ros/humble`, while `booster_interface` is loaded from the Booster overlay;
