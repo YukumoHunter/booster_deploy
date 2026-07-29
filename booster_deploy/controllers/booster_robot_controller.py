@@ -70,7 +70,6 @@ class BoosterRobotPortal:
         # Use multiprocessing.Event for inter-process communication
         self.exit_event = mp.Event()
         self.inference_ready_event = mp.Event()
-        self.policy_control_event = mp.Event()
         self.is_running = True
         self.timer = CountTimer(
             self.cfg.booster.low_state_dt, use_sim_time=use_sim_time)
@@ -314,29 +313,11 @@ class BoosterRobotPortal:
             self.logger.info("Waiting for '/joint_ctrl' subscriber, retry in 0.5s")
             time.sleep(0.5)
 
-        self.logger.info("Subscriber found, starting control loop")        
-
-        prepare_state = self.robot.cfg.prepare_state
-        init_joint_pos = self.synced_state.read()[0]['joint_pos']
-        for i in range(self.robot.num_joints):
-            self.motor_cmd[i].q = init_joint_pos[i]
-            self.motor_cmd[i].kp = float(prepare_state.stiffness[i])
-            self.motor_cmd[i].kd = float(prepare_state.damping[i])
-
-        self.low_cmd_publisher.publish(self.low_cmd)
-        time.sleep(0.1)
-
-        # change to custom mode
+        # Inference is already publishing policy commands. They take effect as
+        # soon as the firmware enters custom mode.
+        self.logger.info("Subscriber found, entering custom mode")
         self.client.change_mode(RobotMode.CUSTOM)
-        trans = np.linspace(init_joint_pos, prepare_state.joint_pos, num=500)
-        start_time = self.timer.get_time()
-        for i in range(500):
-            for j in range(self.robot.num_joints):
-                self.motor_cmd[j].q = trans[i][j]
-            self.low_cmd_publisher.publish(self.low_cmd)
-            while self.timer.get_time() < start_time + (i + 1) * 0.002:
-                time.sleep(0.0002)
-        self.logger.info("Custom mode started, initialized with prepare pose")
+        self.logger.info("Custom mode started with policy control")
         return True
 
     def start_inference(self) -> bool:
@@ -366,9 +347,8 @@ class BoosterRobotPortal:
 
         return False
 
-    def activate_policy_control(self) -> None:
-        """Hand control to the initialized policy without another input."""
-        self.policy_control_event.set()
+    def arm_policy_controls(self) -> None:
+        """Enable operator controls after custom mode accepts policy commands."""
         self.remoteControlService.arm_squat_toggle()
         print(f"{self.remoteControlService.get_operation_hint()}")
 
@@ -440,15 +420,14 @@ class BoosterRobotPortal:
 
         print("Initialization complete.")
 
-        # Load and initialize inference before entering custom mode. The child
-        # waits for policy_control_event, so it cannot publish commands yet.
+        # Start policy inference before entering custom mode. Its low-level
+        # commands are ignored by the firmware until custom mode is selected.
         if not self.start_inference():
             print("Policy inference initialization failed.")
         elif not self.start_custom_mode_conditionally():
             print("Custom mode initialization cancelled.")
         else:
-            # Custom-mode preparation completed; hand over automatically.
-            self.activate_policy_control()
+            self.arm_policy_controls()
 
             # main loop: wait for exit signal
             while self.is_running and not self.exit_event.is_set():
@@ -541,18 +520,8 @@ class BoosterRobotController(BaseController):
         self.update_squat_command()
         self.start()
 
-        # Signal that model construction and policy reset have completed before
-        # the robot is allowed to enter custom mode.
-        self.portal.inference_ready_event.set()
-        while (
-            not self.portal.policy_control_event.wait(timeout=0.1)
-            and not self.portal.exit_event.is_set()
-        ):
-            pass
-        if self.portal.exit_event.is_set():
-            return
-
         next_inference_time = self.portal.timer.get_time()
+        first_command_published = False
         while self.is_running and not self.portal.exit_event.is_set():
             if self.portal.timer.get_time() < next_inference_time:
                 time.sleep(0.0002)
@@ -564,5 +533,9 @@ class BoosterRobotController(BaseController):
             self.portal.metrics["policy_step"].mark()
             dof_targets = self.policy_step()
             self.ctrl_step(dof_targets)
+            if not first_command_published:
+                # Custom mode is gated on a complete inference/publish cycle.
+                self.portal.inference_ready_event.set()
+                first_command_published = True
 
         self.portal.exit_event.set()
