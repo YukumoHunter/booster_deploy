@@ -69,6 +69,8 @@ class BoosterRobotPortal:
         self.remoteControlService.print_controls(real_robot=True)
         # Use multiprocessing.Event for inter-process communication
         self.exit_event = mp.Event()
+        self.inference_ready_event = mp.Event()
+        self.policy_control_event = mp.Event()
         self.is_running = True
         self.timer = CountTimer(
             self.cfg.booster.low_state_dt, use_sim_time=use_sim_time)
@@ -337,17 +339,8 @@ class BoosterRobotPortal:
         self.logger.info("Custom mode started, initialized with prepare pose")
         return True
 
-    def start_rl_gait_conditionally(self):
-        """Start RL gait and spawn inference process and publisher thread."""
-        print(f"{self.remoteControlService.get_rl_gait_operation_hint()}")
-        while not self.exit_event.is_set():
-            if self.remoteControlService.start_rl_gait():
-                break
-            time.sleep(0.1)
-
-        if self.exit_event.is_set():
-            return False
-
+    def start_inference(self) -> bool:
+        """Start inference and wait until the policy is initialized."""
         # start inference process (separate process)
         self.inference_process = mp.Process(
             target=BoosterRobotPortal.inference_process_func,
@@ -358,11 +351,26 @@ class BoosterRobotPortal:
             daemon=True,
         )
         self.inference_process.start()
-        self.logger.info("Inference process started")
+        self.logger.info("Inference process starting")
 
+        while not self.exit_event.is_set():
+            if self.inference_ready_event.wait(timeout=0.1):
+                self.logger.info("Inference process ready")
+                return True
+            if not self.inference_process.is_alive():
+                self.logger.error(
+                    "Inference process died during initialization"
+                )
+                self.exit_event.set()
+                return False
+
+        return False
+
+    def activate_policy_control(self) -> None:
+        """Hand control to the initialized policy without another input."""
+        self.policy_control_event.set()
         self.remoteControlService.arm_squat_toggle()
         print(f"{self.remoteControlService.get_operation_hint()}")
-        return True
 
     def cleanup(self) -> None:
         """Clean up resources (idempotent)."""
@@ -432,13 +440,16 @@ class BoosterRobotPortal:
 
         print("Initialization complete.")
 
-        # start custom mode (interruptible)
-        if not self.start_custom_mode_conditionally():
+        # Load and initialize inference before entering custom mode. The child
+        # waits for policy_control_event, so it cannot publish commands yet.
+        if not self.start_inference():
+            print("Policy inference initialization failed.")
+        elif not self.start_custom_mode_conditionally():
             print("Custom mode initialization cancelled.")
-        # start RL gait (interruptible)
-        elif not self.start_rl_gait_conditionally():
-            print("RL gait initialization cancelled.")
         else:
+            # Custom-mode preparation completed; hand over automatically.
+            self.activate_policy_control()
+
             # main loop: wait for exit signal
             while self.is_running and not self.exit_event.is_set():
                 # check whether the inference process is alive
@@ -529,6 +540,18 @@ class BoosterRobotController(BaseController):
         self.update_state()
         self.update_squat_command()
         self.start()
+
+        # Signal that model construction and policy reset have completed before
+        # the robot is allowed to enter custom mode.
+        self.portal.inference_ready_event.set()
+        while (
+            not self.portal.policy_control_event.wait(timeout=0.1)
+            and not self.portal.exit_event.is_set()
+        ):
+            pass
+        if self.portal.exit_event.is_set():
+            return
+
         next_inference_time = self.portal.timer.get_time()
         while self.is_running and not self.portal.exit_event.is_set():
             if self.portal.timer.get_time() < next_inference_time:

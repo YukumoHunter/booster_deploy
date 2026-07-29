@@ -57,7 +57,8 @@ Use `--webots` with `deploy` when the ROS topics are provided by Webots.
 
 On the real robot, controller input arrives on
 `/remote_controller_state`. Press controller A (or keyboard `x`) to enter
-custom mode, then controller B (or keyboard `r`) to start the policy. After
+custom mode. Inference is initialized before custom mode is requested, then
+takes control automatically after the robot reaches its prepare pose. After
 startup, controller B or keyboard `s` toggles squat on and off. In MuJoCo,
 keyboard `s` toggles immediately.
 

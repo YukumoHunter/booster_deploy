@@ -16,7 +16,6 @@ class RemoteControlService:
         self._lock = threading.Lock()
         self._running = True
         self._custom_mode_requested = False
-        self._policy_start_requested = False
         self._squat_enabled = False
         self._toggle_armed = False
         self._suppress_toggle_until_release = False
@@ -39,30 +38,20 @@ class RemoteControlService:
             return "Press controller A or keyboard 'x' to enter custom mode."
         return "Press keyboard 'x' to enter custom mode."
 
-    def get_policy_start_operation_hint(self) -> str:
-        if self.controller_available:
-            return "Press controller B or keyboard 'r' to start the squat policy."
-        return "Press keyboard 'r' to start the squat policy."
-
-    # Compatibility with the existing portal name.
-    get_rl_gait_operation_hint = get_policy_start_operation_hint
-
     def print_controls(self, *, real_robot: bool) -> None:
         """Print the controls available for the selected inputs."""
         if self.controller_available:
             if real_robot:
                 controls = (
-                    "  Controller A / keyboard x  Enter custom mode",
-                    "  Controller B / keyboard r  Start policy",
-                    "  Controller B / keyboard s  Toggle squat after startup",
+                    "  Controller A / keyboard x  Enter custom mode and start policy",
+                    "  Controller B / keyboard s  Toggle squat after policy startup",
                 )
             else:
                 controls = ("  Controller B / keyboard s  Toggle squat on/off",)
         elif real_robot:
             controls = (
-                "  x  Enter custom mode",
-                "  r  Start policy",
-                "  s  Toggle squat on/off after policy startup",
+                "  x  Enter custom mode and start policy",
+                "  s  Toggle squat after policy startup",
             )
         else:
             controls = ("  s  Toggle squat on/off",)
@@ -75,12 +64,8 @@ class RemoteControlService:
         with self._lock:
             return self._custom_mode_requested
 
-    def start_rl_gait(self) -> bool:
-        with self._lock:
-            return self._policy_start_requested
-
     def arm_squat_toggle(self) -> None:
-        """Enable toggle handling without reusing the policy-start press."""
+        """Enable toggle handling after the policy has started."""
         with self._lock:
             self._toggle_armed = True
             self._suppress_toggle_until_release = self._controller_b_pressed
@@ -101,8 +86,6 @@ class RemoteControlService:
         with self._lock:
             if key == "x":
                 self._custom_mode_requested = True
-            elif key == "r":
-                self._policy_start_requested = True
         if key == "s":
             self._toggle_squat()
 
@@ -118,14 +101,15 @@ class RemoteControlService:
 
             if not b_pressed:
                 self._suppress_toggle_until_release = False
-            elif not self._controller_b_pressed:
-                if not self._toggle_armed:
-                    self._policy_start_requested = True
-                elif not self._suppress_toggle_until_release:
-                    self._squat_enabled = not self._squat_enabled
-                    squat_state = (
-                        "enabled" if self._squat_enabled else "disabled"
-                    )
+            elif (
+                not self._controller_b_pressed
+                and self._toggle_armed
+                and not self._suppress_toggle_until_release
+            ):
+                self._squat_enabled = not self._squat_enabled
+                squat_state = (
+                    "enabled" if self._squat_enabled else "disabled"
+                )
 
             self._controller_a_pressed = a_pressed
             self._controller_b_pressed = b_pressed
