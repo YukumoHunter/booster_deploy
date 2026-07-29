@@ -25,7 +25,6 @@ environments:
       p1:
       - conda: https://prefix.dev/conda-forge/linux-64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://prefix.dev/conda-forge/linux-64/bzip2-1.0.8-hda65f42_9.conda
-      - conda: https://prefix.dev/conda-forge/linux-64/evdev-1.9.3-py311h49ec1c0_0.conda
       - conda: https://prefix.dev/conda-forge/linux-64/fmt-12.1.0-hff5e90c_0.conda
       - conda: https://prefix.dev/conda-forge/linux-64/glfw-3.4-hd590300_0.conda
       - conda: https://prefix.dev/conda-forge/linux-64/gmp-6.3.0-hac33072_2.conda
@@ -132,7 +131,6 @@ environments:
       p2:
       - conda: https://prefix.dev/conda-forge/linux-aarch64/_openmp_mutex-4.5-7_kmp_llvm.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/bzip2-1.0.8-h4777abc_9.conda
-      - conda: https://prefix.dev/conda-forge/linux-aarch64/evdev-1.9.3-py311h19352d5_0.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/fmt-12.1.0-h20c602a_0.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/glfw-3.4-h31becfc_0.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/gmp-6.3.0-h0a1ffab_2.conda
@@ -282,7 +280,6 @@ environments:
       - conda: https://prefix.dev/conda-forge/linux-64/eigen-3.4.0-h54a6638_2.conda
       - conda: https://prefix.dev/conda-forge/linux-64/eigen-abi-3.4.0.100-h3bcb7cf_2.conda
       - conda: https://prefix.dev/conda-forge/linux-64/epoxy-1.5.10-hb03c661_2.conda
-      - conda: https://prefix.dev/conda-forge/linux-64/evdev-1.9.3-py311h49ec1c0_0.conda
       - conda: https://prefix.dev/conda-forge/linux-64/expat-2.8.1-hecca717_1.conda
       - conda: https://prefix.dev/conda-forge/linux-64/ffmpeg-7.1.1-gpl_h127656b_906.conda
       - conda: https://prefix.dev/conda-forge/linux-64/flann-1.9.2-he1b7b50_6.conda
@@ -1016,7 +1013,6 @@ environments:
       - conda: https://prefix.dev/conda-forge/linux-aarch64/eigen-3.4.0-h7ac5ae9_2.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/eigen-abi-3.4.0.100-h9a8c16c_2.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/epoxy-1.5.10-he30d5cf_2.conda
-      - conda: https://prefix.dev/conda-forge/linux-aarch64/evdev-1.9.3-py311h19352d5_0.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/expat-2.8.1-hfae3067_1.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/ffmpeg-7.1.1-gpl_h30b7fc1_906.conda
       - conda: https://prefix.dev/conda-forge/linux-aarch64/flann-1.9.2-headf6c6_6.conda
@@ -2350,21 +2346,6 @@ packages:
     - epoxy >=1.5.10,<1.6.0a0
   size: 411735
   timestamp: 1758743520805
-- conda: https://prefix.dev/conda-forge/linux-64/evdev-1.9.3-py311h49ec1c0_0.conda
-  sha256: 9a0e8e6b626184ced4aa2549c7a58ae6ddfc57842c31c1a2ce33553c2e38df76
-  md5: 4f0d3fbe751431c77c4e4c3873c8cc4d
-  depends:
-  - __glibc >=2.17,<3.0.a0
-  - libgcc >=14
-  - python >=3.11,<3.12.0a0
-  - python_abi 3.11.* *_cp311
-  license: BSD-3-Clause
-  license_family: BSD
-  purls:
-  - pkg:pypi/evdev?source=hash-mapping
-  run_exports: {}
-  size: 117429
-  timestamp: 1770340701665
 - conda: https://prefix.dev/conda-forge/linux-64/expat-2.8.1-hecca717_1.conda
   sha256: bc1e8177a4ebbbfcda98b6f4a1575f3337e69f0d2f1025a84570533ca27b89eb
   md5: e211a78613b9d50a096644b97cede8f7
@@ -8724,21 +8705,6 @@ packages:
     - epoxy >=1.5.10,<1.6.0a0
   size: 422103
   timestamp: 1758743388115
-- conda: https://prefix.dev/conda-forge/linux-aarch64/evdev-1.9.3-py311h19352d5_0.conda
-  sha256: 2bb68a1b896ceddcdb186fe1e35f8c2fc3d244608f1732eb0d1133f0b1896b58
-  md5: abcbdd74d42736763c2938ae95656f72
-  depends:
-  - libgcc >=14
-  - python >=3.11,<3.12.0a0
-  - python >=3.11,<3.12.0a0 *_cpython
-  - python_abi 3.11.* *_cp311
-  license: BSD-3-Clause
-  license_family: BSD
-  purls:
-  - pkg:pypi/evdev?source=hash-mapping
-  run_exports: {}
-  size: 80689
-  timestamp: 1770340746044
 - conda: https://prefix.dev/conda-forge/linux-aarch64/expat-2.8.1-hfae3067_1.conda
   sha256: e4cc29e20435f2787031eafaf100496cb700d2ebc246e91211cbde023b2600b4
   md5: 4bcb07322aecccd75514fd585ad0b719

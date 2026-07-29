@@ -55,10 +55,11 @@ workspace and can be run on a development machine.
 `pixi run deploy --task squat` remains available for explicit selection.
 Use `--webots` with `deploy` when the ROS topics are provided by Webots.
 
-On the real robot, press joystick A (keyboard `x`) to enter custom mode, then
-joystick B (keyboard `r`) to start the policy. After startup, joystick B or
-keyboard `s` toggles squat on and off. In MuJoCo, joystick B or keyboard `s`
-toggles immediately.
+On the real robot, controller input arrives on
+`/remote_controller_state`. Press controller A (or keyboard `x`) to enter
+custom mode, then controller B (or keyboard `r`) to start the policy. After
+startup, controller B or keyboard `s` toggles squat on and off. In MuJoCo,
+keyboard `s` toggles immediately.
 
 MuJoCo initializes the robot directly from the model's embedded frame-zero
 root pose, orientation, and joint positions.

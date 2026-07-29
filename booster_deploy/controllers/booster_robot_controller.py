@@ -12,7 +12,7 @@ import torch
 import rclpy
 from rclpy.executors import SingleThreadedExecutor, ExternalShutdownException
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
-from booster_interface.msg import LowState, LowCmd, MotorCmd
+from booster_interface.msg import LowState, LowCmd, MotorCmd, RemoteControllerState
 
 from booster_sdk.client.booster import BoosterClient, RobotMode
 
@@ -63,7 +63,9 @@ class BoosterRobotPortal:
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
-        self.remoteControlService = RemoteControlService()
+        self.remoteControlService = RemoteControlService(
+            controller_available=True
+        )
         self.remoteControlService.print_controls(real_robot=True)
         # Use multiprocessing.Event for inter-process communication
         self.exit_event = mp.Event()
@@ -161,8 +163,8 @@ class BoosterRobotPortal:
     def _start_low_state_subscription(self) -> None:
         """Start ROS 2 subscription loop on a dedicated thread.
 
-        The subscription is run on a dedicated thread and spins a
-        SingleThreadedExecutor for the `/low_state` topic.
+        The subscriptions are run on a dedicated thread and spin a
+        SingleThreadedExecutor for the `/low_state` and controller topics.
         """
 
         def low_state_service_executor():
@@ -177,6 +179,12 @@ class BoosterRobotPortal:
                     reliability=ReliabilityPolicy.BEST_EFFORT,
                     history=HistoryPolicy.KEEP_LAST,
                 ),
+            )
+            low_state_node.create_subscription(
+                RemoteControllerState,
+                "/remote_controller_state",
+                self.remoteControlService.handle_controller_state,
+                10,
             )
 
             executor = SingleThreadedExecutor()

@@ -19,7 +19,6 @@ pytorch = ">=2.5,<3"
 mujoco = ">=3.3,<4"
 onnxruntime = ">=1.20,<2"
 ruff = ">=0.12,<1"
-evdev = ">=1.7,<2"
 
 [pypi-dependencies]
 booster-sdk = "==0.1.2-alpha.2"
