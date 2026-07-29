@@ -22,27 +22,18 @@ git clone https://github.com/BoosterRobotics/booster_assets ../booster_assets
 export BOOSTER_ASSETS_DIR="$(realpath ../booster_assets)"
 ```
 
-For real-robot control, Booster firmware 1.4 or newer and the firmware-provided
-ROS 2 `booster_interface` package are still required. The `deploy` Pixi task
-automatically sources both the ROS 2 installation and Booster interface overlay:
+Real-robot control uses the repository's Pixi-managed `ros` environment. ROS 2
+Humble comes from RoboStack, and the required `booster_interface` messages are
+built locally from `ros2_ws/src/booster_interface`:
 
 ```bash
-source /opt/ros/humble/setup.bash
-source /opt/booster/BoosterRos2Interface/install/setup.bash
+pixi run ros-build
 ```
 
-After sourcing ROS, the task restores the Pixi environment's `lib` directory
-to the front of `LD_LIBRARY_PATH`. This ensures ONNX Runtime uses Pixi's newer
-`libstdc++`, which provides the required `CXXABI_1.3.15`, instead of the older
-system copy on the robot. This setup is kept in `scripts/deploy_robot.sh` so the
-Pixi task remains a simple launcher. The wrapper also disables Python's user
-site so packages under `~/.local` cannot shadow the locked Pixi environment;
-ROS overlay packages remain available through `PYTHONPATH`.
-
-The Pixi environment uses Python 3.10 to remain ABI-compatible with the
-Ubuntu 22.04 ROS 2 Humble installation. `rclpy` is loaded from
-`/opt/ros/humble`, while `booster_interface` is loaded from the Booster overlay;
-they are intentionally not installed by Pixi.
+`scripts/ros-env.sh` sources only the resulting local
+`ros2_ws/install/setup.bash`; it never sources `/opt/ros` or the robot's system
+Python environment. The `deploy` task depends on `ros-build`, so a normal launch
+builds the local interface automatically.
 
 The high-level mode client is IntelligentRoboticsLab's
 [`booster-sdk`](https://github.com/IntelligentRoboticsLab/booster_sdk), pinned
@@ -58,8 +49,8 @@ pixi run deploy-mujoco
 pixi run deploy
 ```
 
-Run `pixi run deploy` on the robot, where both setup scripts are installed.
-MuJoCo deployment does not source ROS and can be run on a development machine.
+Run `pixi run deploy` on the robot. MuJoCo deployment does not activate the ROS
+workspace and can be run on a development machine.
 
 `pixi run deploy --task squat` remains available for explicit selection.
 Use `--webots` with `deploy` when the ROS topics are provided by Webots.
@@ -89,6 +80,7 @@ available in both MuJoCo and on the real robot.
 ```bash
 pixi run test
 pixi run lint
+pixi run ros-build
 ```
 
 The tracked policy artifact is `tasks/squat/models/squat.onnx`. Its metadata is

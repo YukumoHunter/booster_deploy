@@ -6,9 +6,13 @@ tasks/*/motions/
 
 .DS_Store
 
+# Local ROS workspace build products
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+
 # Common Python temporary files
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
