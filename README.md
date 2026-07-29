@@ -23,17 +23,21 @@ export BOOSTER_ASSETS_DIR="$(realpath ../booster_assets)"
 ```
 
 For real-robot control, Booster firmware 1.4 or newer and the firmware-provided
-ROS 2 `booster_interface` package are still required. Source its overlay before
-launching:
+ROS 2 `booster_interface` package are still required. The `deploy` Pixi task
+automatically sources the robot's ROS 2 installation from:
 
 ```bash
-source /opt/booster/BoosterRos2Interface/install/setup.bash
+/opt/ros/humble/setup.bash
 ```
 
-The high-level mode client is the Rust/Python
-[`booster-sdk`](https://github.com/IntelligentRoboticsLab/booster_sdk), installed
-by Pixi from PyPI. It communicates over DDS domain 0 by default; set
-`BOOSTER_DOMAIN_ID` if the robot uses another domain.
+The Pixi environment uses Python 3.10 to remain ABI-compatible with the
+Ubuntu 22.04 ROS 2 Humble installation. `rclpy` and `booster_interface` are
+loaded from `/opt/ros/humble`; they are intentionally not installed by Pixi.
+
+The high-level mode client is Booster Robotics' original
+[`booster-robotics-sdk-python`](https://pypi.org/project/booster-robotics-sdk-python/),
+installed by Pixi from PyPI. The IntelligentRoboticsLab `booster-sdk` package is
+not used.
 
 ## Run
 
@@ -44,6 +48,10 @@ pixi run list-tasks
 pixi run deploy-mujoco
 pixi run deploy
 ```
+
+Run `pixi run deploy` on the robot, where `/opt/ros/humble/setup.bash` and the
+`booster_interface` package are installed. MuJoCo deployment does not source
+ROS and can be run on a development machine.
 
 `pixi run deploy --task squat` remains available for explicit selection.
 Use `--webots` with `deploy` when the ROS topics are provided by Webots.

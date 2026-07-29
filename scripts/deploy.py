@@ -53,14 +53,28 @@ def main():
 
         MujocoController(task_cfg).run()
     else:
-        # initialize network and run robot portal
+        # The high-level SDK changes robot modes. The firmware ROS interface
+        # still supplies the low-level state and joint-command message types.
         try:
-            import booster_sdk  # noqa: F401
+            import booster_robotics_sdk_python  # noqa: F401
         except ImportError:
             print(
-                "Error: booster-sdk is not installed.\n"
+                "Error: booster-robotics-sdk-python is not installed.\n"
                 "Run this command through Pixi for real robot deployment.\n"
                 "For MuJoCo simulation, use --mujoco flag instead."
+            )
+            sys.exit(1)
+        try:
+            import booster_interface  # noqa: F401
+        except ImportError:
+            print(
+                "Error: the ROS 2 'booster_interface' package is not available.\n"
+                "Real-robot deployment needs the firmware-provided low-level "
+                "ROS interface in addition to the Booster Robotics SDK.\n"
+                "The Pixi deploy task sources /opt/ros/humble/setup.bash; "
+                "run it on the robot and verify that file provides the "
+                "booster_interface package.\n"
+                "For simulation, run: pixi run deploy-mujoco"
             )
             sys.exit(1)
 
